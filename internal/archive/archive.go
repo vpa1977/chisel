@@ -26,6 +26,9 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
+	Url        string
+	PortsUrl   string
+	Section    string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -68,6 +71,9 @@ type ubuntuIndex struct {
 	release   control.Section
 	packages  control.File
 	cache     *cache.Cache
+	url       string `default:"http://archive.ubuntu.com/ubuntu/"`
+	portsURL  string `default:"http://ports.ubuntu.com/ubuntu-ports/"`
+	section   string `default:"Ubuntu"`
 }
 
 func (a *ubuntuArchive) Options() *Options {
@@ -114,9 +120,6 @@ func (a *ubuntuArchive) Fetch(pkg string) (io.ReadCloser, error) {
 	return reader, nil
 }
 
-const ubuntuURL = "http://archive.ubuntu.com/ubuntu/"
-const ubuntuPortsURL = "http://ports.ubuntu.com/ubuntu-ports/"
-
 func openUbuntu(options *Options) (Archive, error) {
 	if len(options.Components) == 0 {
 		return nil, fmt.Errorf("archive options missing components")
@@ -146,6 +149,9 @@ func openUbuntu(options *Options) (Archive, error) {
 				component: component,
 				release:   release,
 				cache:     archive.cache,
+				url:       options.Url,
+				portsURL:  options.PortsUrl,
+				section:   options.Section,
 			}
 			if release == nil {
 				err := index.fetchRelease()
@@ -180,7 +186,7 @@ func (index *ubuntuIndex) fetchRelease() error {
 	if err != nil {
 		return fmt.Errorf("parsing archive Release file: %v", err)
 	}
-	section := ctrl.Section("Ubuntu")
+	section := ctrl.Section(index.section)
 	if section == nil {
 		return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
 	}
@@ -237,9 +243,10 @@ func (index *ubuntuIndex) fetch(suffix, digest string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	baseURL := ubuntuURL
+	baseURL := index.url
+
 	if index.arch != "amd64" && index.arch != "i386" {
-		baseURL = ubuntuPortsURL
+		baseURL = index.portsURL
 	}
 
 	var url string
