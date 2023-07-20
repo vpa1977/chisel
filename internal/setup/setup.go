@@ -30,9 +30,9 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	Url        string
-	PortsUrl   string
 	Section    string
+	Urls       map[string]string
+	PortsUrls  map[string]string
 }
 
 // Package holds a collection of slices that represent parts of themselves.
@@ -326,13 +326,13 @@ type yamlRelease struct {
 const yamlReleaseFormat = "chisel-v1"
 
 type yamlArchive struct {
-	Version    string   `yaml:"version"`
-	Suites     []string `yaml:"suites"`
-	Components []string `yaml:"components"`
-	Default    bool     `yaml:"default"`
-	Url        string   `yaml:"url"`
-	PortsUrl   string   `yaml:"ports-url"`
-	Section    string   `yaml:"section"`
+	Version    string            `yaml:"version"`
+	Suites     []string          `yaml:"suites"`
+	Components []string          `yaml:"components"`
+	Default    bool              `yaml:"default"`
+	Section    string            `yaml:"section"`
+	Urls       map[string]string `yaml:"urls"`
+	PortsUrls  map[string]string `yaml:"ports-urls"`
 }
 
 type yamlPackage struct {
@@ -447,8 +447,8 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Version:    details.Version,
 			Suites:     details.Suites,
 			Components: details.Components,
-			Url:        details.Url,
-			PortsUrl:   details.PortsUrl,
+			Urls:       details.Urls,
+			PortsUrls:  details.PortsUrls,
 			Section:    details.Section,
 		}
 	}

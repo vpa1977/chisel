@@ -91,8 +91,8 @@ func (cmd *cmdCut) Execute(args []string) error {
 			Suites:     archiveInfo.Suites,
 			Components: archiveInfo.Components,
 			CacheDir:   cache.DefaultDir("chisel"),
-			Url:        archiveInfo.Url,
-			PortsUrl:   archiveInfo.PortsUrl,
+			Urls:       archiveInfo.Urls,
+			PortsUrls:  archiveInfo.PortsUrls,
 			Section:    archiveInfo.Section,
 		})
 		if err != nil {

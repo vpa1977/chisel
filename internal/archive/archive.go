@@ -26,9 +26,9 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
-	Url        string
-	PortsUrl   string
 	Section    string
+	Urls       map[string]string
+	PortsUrls  map[string]string
 }
 
 func Open(options *Options) (Archive, error) {
@@ -71,10 +71,14 @@ type ubuntuIndex struct {
 	release   control.Section
 	packages  control.File
 	cache     *cache.Cache
-	url       string `default:"http://archive.ubuntu.com/ubuntu/"`
-	portsURL  string `default:"http://ports.ubuntu.com/ubuntu-ports/"`
-	section   string `default:"Ubuntu"`
+	urls      map[string]string
+	portsURLs map[string]string
+	section   string
 }
+
+const defaultURL string = "http://archive.ubuntu.com/ubuntu/"
+const defaultPortsURL string = "http://ports.ubuntu.com/ubuntu-ports/"
+const defaultSeciton string = "Ubuntu"
 
 func (a *ubuntuArchive) Options() *Options {
 	return &a.options
@@ -149,8 +153,8 @@ func openUbuntu(options *Options) (Archive, error) {
 				component: component,
 				release:   release,
 				cache:     archive.cache,
-				url:       options.Url,
-				portsURL:  options.PortsUrl,
+				urls:      options.Urls,
+				portsURLs: options.PortsUrls,
 				section:   options.Section,
 			}
 			if release == nil {
@@ -186,7 +190,12 @@ func (index *ubuntuIndex) fetchRelease() error {
 	if err != nil {
 		return fmt.Errorf("parsing archive Release file: %v", err)
 	}
-	section := ctrl.Section(index.section)
+
+	sectionName := index.section
+	if len(sectionName) == 0 {
+		sectionName = defaultSeciton
+	}
+	section := ctrl.Section(sectionName)
 	if section == nil {
 		return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
 	}
@@ -243,10 +252,16 @@ func (index *ubuntuIndex) fetch(suffix, digest string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	baseURL := index.url
+	baseURL, ok := index.urls[index.suite]
+	if !ok {
+		baseURL = defaultURL
+	}
 
 	if index.arch != "amd64" && index.arch != "i386" {
-		baseURL = index.portsURL
+		baseURL, ok = index.portsURLs[index.suite]
+		if !ok {
+			baseURL = defaultPortsURL
+		}
 	}
 
 	var url string
