@@ -30,7 +30,7 @@ type Archive struct {
 	Version    string
 	Suites     []string
 	Components []string
-	Section    string
+	Sections   map[string]string
 	Urls       map[string]string
 	PortsUrls  map[string]string
 }
@@ -330,7 +330,7 @@ type yamlArchive struct {
 	Suites     []string          `yaml:"suites"`
 	Components []string          `yaml:"components"`
 	Default    bool              `yaml:"default"`
-	Section    string            `yaml:"section"`
+	Sections   map[string]string `yaml:"sections"`
 	Urls       map[string]string `yaml:"urls"`
 	PortsUrls  map[string]string `yaml:"ports-urls"`
 }
@@ -449,7 +449,7 @@ func parseRelease(baseDir, filePath string, data []byte) (*Release, error) {
 			Components: details.Components,
 			Urls:       details.Urls,
 			PortsUrls:  details.PortsUrls,
-			Section:    details.Section,
+			Sections:   details.Sections,
 		}
 	}
 

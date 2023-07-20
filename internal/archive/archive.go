@@ -26,7 +26,7 @@ type Options struct {
 	Suites     []string
 	Components []string
 	CacheDir   string
-	Section    string
+	Sections   map[string]string
 	Urls       map[string]string
 	PortsUrls  map[string]string
 }
@@ -71,9 +71,9 @@ type ubuntuIndex struct {
 	release   control.Section
 	packages  control.File
 	cache     *cache.Cache
+	sections  map[string]string
 	urls      map[string]string
 	portsURLs map[string]string
-	section   string
 }
 
 const defaultURL string = "http://archive.ubuntu.com/ubuntu/"
@@ -94,6 +94,9 @@ func (a *ubuntuArchive) selectPackage(pkg string) (control.Section, *ubuntuIndex
 	var selectedSection control.Section
 	var selectedIndex *ubuntuIndex
 	for _, index := range a.indexes {
+		if index.packages == nil {
+			continue
+		}
 		section := index.packages.Section(pkg)
 		if section != nil && section.Get("Filename") != "" {
 			version := section.Get("Version")
@@ -155,7 +158,7 @@ func openUbuntu(options *Options) (Archive, error) {
 				cache:     archive.cache,
 				urls:      options.Urls,
 				portsURLs: options.PortsUrls,
-				section:   options.Section,
+				sections:  options.Sections,
 			}
 			if release == nil {
 				err := index.fetchRelease()
@@ -191,13 +194,13 @@ func (index *ubuntuIndex) fetchRelease() error {
 		return fmt.Errorf("parsing archive Release file: %v", err)
 	}
 
-	sectionName := index.section
-	if len(sectionName) == 0 {
+	sectionName, ok := index.sections[index.suite]
+	if !ok {
 		sectionName = defaultSeciton
 	}
 	section := ctrl.Section(sectionName)
 	if section == nil {
-		return fmt.Errorf("corrupted archive Release file: no Ubuntu section")
+		return fmt.Errorf("corrupted archive Release file: no %s section", sectionName)
 	}
 	logf("Release date: %s", section.Get("Date"))
 
@@ -214,17 +217,21 @@ func (index *ubuntuIndex) fetchIndex() error {
 	}
 
 	logf("Fetching index for %s %s %s %s component...", index.label, index.version, index.suite, index.component)
-	reader, err := index.fetch(packagesPath+".gz", digest)
-	if err != nil {
-		return err
-	}
-	ctrl, err := control.ParseReader("Package", reader)
-	if err != nil {
-		return fmt.Errorf("parsing archive Package file: %v", err)
-	}
+	var err error
+	for _, ext := range []string{".gz", ".xz"} {
+		reader, err := index.fetch(packagesPath+ext, digest)
+		if err != nil {
+			continue
+		}
+		ctrl, err := control.ParseReader("Package", reader)
+		if err != nil {
+			return fmt.Errorf("parsing archive Package file: %v", err)
+		}
 
-	index.packages = ctrl
-	return nil
+		index.packages = ctrl
+		return nil
+	}
+	return err
 }
 
 func (index *ubuntuIndex) checkComponents(components []string) error {
@@ -233,6 +240,10 @@ func (index *ubuntuIndex) checkComponents(components []string) error {
 		found := false
 		for _, c2 := range releaseComponents {
 			if c1 == c2 {
+				found = true
+				break
+			}
+			if "updates/"+c1 == c2 {
 				found = true
 				break
 			}
@@ -268,7 +279,7 @@ func (index *ubuntuIndex) fetch(suffix, digest string) (io.ReadCloser, error) {
 	if strings.HasPrefix(suffix, "pool/") {
 		url = baseURL + suffix
 	} else {
-		url = baseURL + "dists/" + index.suite + "/" + suffix
+		url = baseURL + "/dists/" + index.suite + "/" + suffix
 	}
 
 	req, err := http.NewRequest("GET", url, nil)

@@ -93,7 +93,7 @@ func (cmd *cmdCut) Execute(args []string) error {
 			CacheDir:   cache.DefaultDir("chisel"),
 			Urls:       archiveInfo.Urls,
 			PortsUrls:  archiveInfo.PortsUrls,
-			Section:    archiveInfo.Section,
+			Sections:   archiveInfo.Sections,
 		})
 		if err != nil {
 			return err
